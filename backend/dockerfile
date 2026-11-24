@@ -1,0 +1,30 @@
+FROM node:24-bookworm-slim AS dependencies
+WORKDIR /app
+
+COPY package.json package-lock.json .npmrc ./
+COPY backend/package.json ./backend/package.json
+COPY frontend/package.json ./frontend/package.json
+
+FROM dependencies AS build
+RUN npm ci
+COPY backend/ ./backend/
+RUN npm run build:backend
+
+FROM dependencies AS production-dependencies
+RUN npm ci --omit=dev --workspace backend
+
+FROM node:24-bookworm-slim AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY --from=production-dependencies /app/backend ./backend
+COPY --from=build /app/backend/dist ./backend/dist
+COPY --from=build /app/backend/src/db/schema.sql ./backend/src/db/schema.sql
+
+WORKDIR /app/backend
+USER node
+EXPOSE 5000
+
+CMD ["node", "dist/server.js"]

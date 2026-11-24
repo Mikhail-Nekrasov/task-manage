@@ -47,3 +47,9 @@ jobs:
 
       - name: Test frontend
         run: npm run test:frontend
+
+      - name: Build backend Docker image
+        run: docker build -f backend/Dockerfile -t task-manage-backend:ci .
+
+      - name: Build frontend Docker image
+        run: docker build -f frontend/Dockerfile --build-arg VITE_API_URL=http://localhost:5002/api -t task-manage-frontend:ci .
